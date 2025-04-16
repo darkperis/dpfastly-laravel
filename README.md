@@ -104,8 +104,6 @@ One or multiple URIs can be purged by using a comma-separated list:
 
 ```php
 Fastly::purge('/blog,/about-us,/');
-// or
-Fastly::purgeItems(['/blog', '/about-us', '/']);
 ````
 
 ### Laravel Authentication

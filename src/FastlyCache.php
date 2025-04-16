@@ -5,63 +5,45 @@ namespace Darkpony\Fastly;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Exception\GuzzleException;
+use Illuminate\Support\Facades\Http;
 
 class FastlyCache
 {
 
     public function purge(string $items)
     {
-        $endpoint    = config('fastly.endpoint', 'https://api.fastly.com/purge');
+        $endpoint    = config('fastly.endpoint', 'https://api.fastly.com');
+        $domain    = config('fastly.domain', '');
         $api_key     = config('fastly.api_key', '');
-        $baseurl     = env('APP_URL');
+        $stale    = config('fastly.stale', 1);
+        $service_id    = config('fastly.service_id', '');
 
-        if($api_key != '' && $endpoint != '') {
+        if($api_key != '' && $endpoint != '' && $domain != '') {
 
             if($items == '*') {
-                $data = [
-                    'purge' => 'all',
-                    'url' => [
-                        $baseurl
-                    ]
-                ];
+                $response = Http::withHeaders([
+                    'Content-Type' => 'application/json',
+                    'Fastly-Key' => $api_key
+                ])->withBody(json_encode(['service_id' => $service_id]),'application/json')->post($endpoint.'/service/'.$service_id.'/purge_all');
             }
             elseif($items == '/') {
-
-                $data = [
-                    'purge' => 'bulk',
-                    'url' => [$baseurl]
-                ];
+                $response = Http::withHeaders([
+                    'Fastly-Key' => $api_key,
+                    'fastly-soft-purge' => $stale,
+                    'Accept' => 'application/json'
+                ])->post($endpoint.'/purge/'.$domain.'/', []);
             }
             else {
-                $data = [];
                 $urls = explode(',', $items);
                 foreach ($urls as $url) {
-                    if($url == '/') {
-                        $data[] = $baseurl;
-                    }
-                    else {
-                        $data[] = $baseurl.$url;
-                    }
+                    $response = Http::withHeaders([
+                            'Fastly-Key' => $api_key,
+                            'fastly-soft-purge' => $stale,
+                            'Accept' => 'application/json'
+                        ])->post($endpoint.'/purge/'.$domain.$url, []);
                 }
-
-                $data = [
-                    'purge' => 'bulk',
-                    'url' => $data
-                ];
             }
-            
-            $body = json_encode( $data );
-
-            $options = [
-                'body'    => $body,
-                'headers' => [
-                    'Content-Type' => 'application/json',
-                    'Authorization' => 'Bearer ' . $api_key,
-                ]
-            ];
-
-            $client = new Client();
-            $res = $client->request('POST', $endpoint, $options);
+            /*
             $response = $res->getBody()->getContents();
             $result = json_decode($response, true);
 
@@ -71,7 +53,7 @@ class FastlyCache
 
             if ( ! $result['success'] ) {
                 \Log::info('Fastly: Unknown error while trying to purge cache.');
-            }
+            }*/
 
             \Log::info('Fastly: Cache purged successfully');
 
@@ -83,10 +65,4 @@ class FastlyCache
         return $this->purge('*');
     }
 
-    public function purgeItems(array $items)
-    {
-        if (count($items)) {
-            return $this->purge(implode(',', $items));
-        }
-    }
 }
