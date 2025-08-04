@@ -17,6 +17,7 @@ class FastlyCache
         $api_key     = config('fastly.api_key', '');
         $stale    = config('fastly.stale', 1);
         $service_id    = config('fastly.service_id', '');
+        $log    = config('fastly.log', false);
 
         if($api_key != '' && $endpoint != '' && $domain != '') {
 
@@ -46,16 +47,19 @@ class FastlyCache
             /*
             $response = $res->getBody()->getContents();
             $result = json_decode($response, true);
+            */
 
-            if ( ! empty( $result['error'] ) ) {
-                \Log::info('Fastly: Error while trying to purge cache: ' . $result['error']['message']);
+            if($log) {
+                $result = json_decode($response, true);
+
+                if ( ! empty( $result['status'] ) && $result['status'] == 'ok') {
+                   \Log::info('Fastly: Cache purged successfully');
+                }
+                else {
+                    \Log::info('Fastly: Error while trying to purge cache: ');
+                    \Log::info($response);
+                }
             }
-
-            if ( ! $result['success'] ) {
-                \Log::info('Fastly: Unknown error while trying to purge cache.');
-            }*/
-
-            \Log::info('Fastly: Cache purged successfully');
 
         }
     }

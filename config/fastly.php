@@ -47,4 +47,6 @@ return [
      * Guest only mode (Do not cache logged in users)
      */
      'guest_only' => env('FASTLY_GUEST_ONLY', false),
+
+     'log' => env('FASTLY_LOG', false),
 ];
